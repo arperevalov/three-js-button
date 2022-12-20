@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { RGBELoader } from'three/examples/jsm/loaders/RGBELoader';
-import { Light } from 'three';
+import { Light, Raycaster } from 'three';
 import AudioPlayer from './js/audio';
 
 let sizes = {
@@ -62,7 +62,6 @@ controls.enableZoom = false
 controls.autoRotate = true
 controls.autoRotateSpeed = 5
 
-
 const keydown = () => {
     player.play()
     meshes[1].position.y = -.2
@@ -72,11 +71,27 @@ const keyup = () => {
     player.stop()
     meshes[1].position.y = 0
 }
-document.addEventListener('keydown', keydown)
-document.addEventListener('keyup', keyup)
 
-document.addEventListener('touchstart', keydown)
-document.addEventListener('touchend', keyup)
+const pointerMove = (e: MouseEvent) => {
+	pointer.x = ( e.clientX / window.innerWidth ) * 2 - 1;
+	pointer.y = - ( e.clientY / window.innerHeight ) * 2 + 1;
+}
+
+const withMouse = (callback:CallableFunction) => {
+	const intersects = raycaster.intersectObjects<any>( scene.children );
+
+    for (let item of intersects) {
+        if (item.object === meshes[1]) {
+            return callback()
+        }
+    }
+}
+
+window.addEventListener('keydown', keydown)
+window.addEventListener('keyup', keyup)
+
+window.addEventListener('touchstart', keydown)
+window.addEventListener('touchend', keyup)
 
 
 window.addEventListener('resize', ()=> {
@@ -86,7 +101,16 @@ window.addEventListener('resize', ()=> {
     renderer.setSize(sizes.innerWidth, sizes.innerHeight)
 })
 
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+window.addEventListener('mousemove', pointerMove)
+window.addEventListener('mousedown', ()=>{withMouse(keydown)})
+window.addEventListener('mouseup', keyup)
+
 const loop = () => {
+    raycaster.setFromCamera( pointer, camera );
+
     controls.update()
     requestAnimationFrame(loop)
     renderer.render(scene, camera)
